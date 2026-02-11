@@ -187,7 +187,7 @@
 
       const MIN_ACCEPTABLE_ACCURACY_M = 150;
       const MAX_REASONABLE_SPEED_MPS = 55;
-      const MIN_MOVEMENT_FOR_BEARING_M = 3;
+      const MIN_MOVEMENT_FOR_BEARING_M = 1;
       const STALE_TIMEOUT_MS = 25000;
       const EXTRA_POLL_MS = 3000;
 
@@ -203,6 +203,8 @@
       let lastHeading = null;
       let lastHeadingSource = '';
       let currentSpeedMps = 0;
+      let lastRawPoint = null;
+      let lastSpeedSource = '推定';
 
       function setStatus(message, isError = false) {
         statusEl.textContent = message;
@@ -268,6 +270,15 @@
           return;
         }
 
+        if (lastRawPoint && path.length > 0) {
+          const current = path[path.length - 1];
+          const movementM = haversineMeters(lastRawPoint, current);
+          if (movementM >= MIN_MOVEMENT_FOR_BEARING_M) {
+            setHeading(bearingDegrees(lastRawPoint, current), '移動(補完)');
+            return;
+          }
+        }
+
         if (Number.isFinite(lastHeading)) {
           headingTextEl.textContent = `${Math.round(lastHeading)}° ${headingToCardinal(lastHeading)} (${lastHeadingSource}:保持)`;
           return;
@@ -276,9 +287,10 @@
         headingTextEl.textContent = '取得待ち';
       }
 
-      function updateSpeedDisplay(mps) {
+      function updateSpeedDisplay(mps, source = lastSpeedSource) {
         currentSpeedMps = Math.max(0, Number.isFinite(mps) ? mps : 0);
-        speedEl.textContent = formatSpeedFromMps(currentSpeedMps);
+        lastSpeedSource = source;
+        speedEl.textContent = `${formatSpeedFromMps(currentSpeedMps)} (${source})`;
       }
 
       function restartTrackingWatch() {
@@ -374,36 +386,54 @@
         });
       }
 
+      function smoothSpeed(nextMps) {
+        if (!Number.isFinite(nextMps)) return currentSpeedMps;
+        const alpha = 0.45;
+        return currentSpeedMps * (1 - alpha) + nextMps * alpha;
+      }
+
       function resolveSpeedMps(point) {
-        if (Number.isFinite(point.speed) && point.speed >= 0) return point.speed;
-        if (path.length === 0) return 0;
-        const prev = path[path.length - 1];
-        const dtSec = Math.max((point.timestamp - prev.timestamp) / 1000, 1);
-        const distanceM = haversineMeters(prev, point);
-        return distanceM / dtSec;
+        if (Number.isFinite(point.speed) && point.speed >= 0) {
+          return { value: point.speed, source: 'GPS' };
+        }
+
+        if (!lastRawPoint) {
+          return { value: 0, source: '推定' };
+        }
+
+        const dtSec = Math.max((point.timestamp - lastRawPoint.timestamp) / 1000, 0.5);
+        const distanceM = haversineMeters(lastRawPoint, point);
+        return { value: distanceM / dtSec, source: '推定' };
       }
 
       function updatePosition(pos) {
         const { latitude, longitude, accuracy, speed, heading } = pos.coords;
         const point = { lat: latitude, lng: longitude, speed, heading, timestamp: pos.timestamp, speedMps: 0 };
 
+        const speedInfo = resolveSpeedMps(point);
+        const smoothed = smoothSpeed(speedInfo.value);
+        updateSpeedDisplay(smoothed, speedInfo.source);
+
         if (typeof accuracy === 'number' && accuracy > MIN_ACCEPTABLE_ACCURACY_M) {
           setStatus(`精度が低いためスキップしました（±${Math.round(accuracy)}m）。`, true);
           renderHeading(point);
+          lastRawPoint = point;
           return;
         }
 
         if (isLikelyGpsJump(point)) {
           setStatus('急な座標ジャンプを検出したため、この点は除外しました。', true);
           renderHeading(point);
+          lastRawPoint = point;
           return;
         }
 
         if (path.length > 0) totalDistanceM += haversineMeters(path[path.length - 1], point);
 
-        point.speedMps = resolveSpeedMps(point);
+        point.speedMps = smoothed;
         lastUpdateAt = Date.now();
         path.push(point);
+        lastRawPoint = point;
         marker.setLatLng([latitude, longitude]);
         polyline.setLatLngs(path.map((p) => [p.lat, p.lng]));
         map.panTo([latitude, longitude], { animate: true });
@@ -411,7 +441,6 @@
         latEl.textContent = latitude.toFixed(6);
         lngEl.textContent = longitude.toFixed(6);
         accuracyEl.textContent = `${Math.round(accuracy)} m`;
-        updateSpeedDisplay(point.speedMps);
         renderHeading(point);
         distanceEl.textContent = totalDistanceM >= 1000
           ? `${(totalDistanceM / 1000).toFixed(2)} km`
@@ -506,6 +535,7 @@
 
       function clearTrack() {
         path = [];
+        lastRawPoint = null;
         totalDistanceM = 0;
         polyline.setLatLngs([]);
         distanceEl.textContent = '0 m';
