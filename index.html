@@ -22,152 +22,61 @@
         --danger: #f87171;
         --border: #2b3a59;
       }
-
       * { box-sizing: border-box; }
-
       body {
         margin: 0;
         font-family: Inter, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
         background: radial-gradient(circle at 10% 0%, #17294d 0, var(--bg) 40%);
         color: var(--text);
       }
-
       .container {
         width: min(1100px, 94%);
         margin: 1.25rem auto 2rem;
         display: grid;
         gap: 1rem;
       }
-
       .card {
         background: color-mix(in hsl, var(--card) 92%, black);
         border: 1px solid var(--border);
         border-radius: 14px;
         padding: 1rem;
       }
-
       h1 { margin: 0 0 0.7rem; }
       p { margin: 0; color: var(--muted); }
-
-      .layout {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: 1fr;
-      }
-
-      @media (min-width: 900px) {
-        .layout {
-          grid-template-columns: 1.45fr 1fr;
-        }
-      }
-
-      #map {
-        width: 100%;
-        height: min(62vh, 520px);
-        border-radius: 12px;
-        border: 1px solid var(--border);
-      }
-
-      .controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-        margin-bottom: 0.9rem;
-      }
-
+      .layout { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+      @media (min-width: 900px) { .layout { grid-template-columns: 1.45fr 1fr; } }
+      #map { width: 100%; height: min(62vh, 520px); border-radius: 12px; border: 1px solid var(--border); }
+      .controls { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-bottom: 0.9rem; }
       button {
-        border: none;
-        background: var(--accent);
-        color: #fff;
-        border-radius: 10px;
-        padding: 0.65rem 0.95rem;
-        font-size: 0.95rem;
-        font-weight: 700;
-        cursor: pointer;
+        border: none; background: var(--accent); color: #fff; border-radius: 10px; padding: 0.65rem 0.95rem;
+        font-size: 0.95rem; font-weight: 700; cursor: pointer;
       }
-
       button.secondary { background: #334155; }
       button.success { background: var(--accent-2); }
       button:disabled { opacity: 0.65; cursor: not-allowed; }
-
       .status { min-height: 1.4rem; color: var(--muted); }
       .status.error { color: var(--danger); }
-
-      .grid {
-        display: grid;
-        gap: 0.65rem;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      }
-
-      .metric {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 0.7rem;
-        background: #10192b;
-      }
-
-      .label {
-        display: block;
-        color: var(--muted);
-        font-size: 0.8rem;
-        margin-bottom: 0.15rem;
-      }
-
+      .grid { display: grid; gap: 0.65rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      .metric { border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem; background: #10192b; }
+      .label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.15rem; }
       .value { font-size: 1.02rem; font-weight: 700; }
-
-      .history {
-        margin-top: 0.8rem;
-        max-height: 250px;
-        overflow: auto;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.84rem;
-      }
-
-      th, td {
-        text-align: left;
-        padding: 0.45rem 0.5rem;
-        border-bottom: 1px solid #213150;
-        white-space: nowrap;
-      }
-
-      th {
-        position: sticky;
-        top: 0;
-        background: #172540;
-        z-index: 1;
-      }
-
-      .footnote {
-        font-size: 0.8rem;
-        color: var(--muted);
-      }
-
-      code {
-        background: #0f172a;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 0.08rem 0.4rem;
-      }
+      .history { margin-top: 0.8rem; max-height: 250px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+      th, td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid #213150; white-space: nowrap; }
+      th { position: sticky; top: 0; background: #172540; z-index: 1; }
+      .footnote { font-size: 0.8rem; color: var(--muted); }
+      code { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 0.08rem 0.4rem; }
     </style>
   </head>
   <body>
     <main class="container">
       <section class="card">
         <h1>📍 リアルタイムGPSアプリ（単一HTML版）</h1>
-        <p>この <code>index.html</code> 1ファイルだけで動作します。現在地・軌跡・距離・速度をリアルタイムで表示します。</p>
+        <p>方向（端末コンパス/移動方位）を常時表示し、位置更新も高頻度化しています。</p>
       </section>
 
       <section class="layout">
-        <section class="card">
-          <div id="map" aria-label="地図"></div>
-        </section>
-
+        <section class="card"><div id="map" aria-label="地図"></div></section>
         <section class="card">
           <div class="controls">
             <button id="startBtn" class="success">追跡開始</button>
@@ -182,33 +91,25 @@
             <div class="metric"><span class="label">経度</span><span class="value" id="lng">--</span></div>
             <div class="metric"><span class="label">精度</span><span class="value" id="accuracy">--</span></div>
             <div class="metric"><span class="label">速度</span><span class="value" id="speed">--</span></div>
-            <div class="metric"><span class="label">方角</span><span class="value" id="heading">--</span></div>
+            <div class="metric"><span class="label">向き（常時）</span><span class="value" id="heading">--</span></div>
             <div class="metric"><span class="label">累計距離</span><span class="value" id="distance">0 m</span></div>
           </div>
 
           <div class="history">
             <table>
-              <thead>
-                <tr><th>時刻</th><th>緯度</th><th>経度</th><th>速度</th></tr>
-              </thead>
-              <tbody id="historyBody">
-                <tr><td colspan="4">まだ記録がありません。</td></tr>
-              </tbody>
+              <thead><tr><th>時刻</th><th>緯度</th><th>経度</th><th>速度</th></tr></thead>
+              <tbody id="historyBody"><tr><td colspan="4">まだ記録がありません。</td></tr></tbody>
             </table>
           </div>
         </section>
       </section>
 
       <section class="card footnote">
-        位置情報は HTTPS（または localhost）で利用できます。ブラウザで位置情報の許可が必要です。
+        位置情報は HTTPS（または localhost）で利用できます。iPhoneでは端末向き取得の許可が必要な場合があります。
       </section>
     </main>
 
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
       const statusEl = document.getElementById('status');
       const startBtn = document.getElementById('startBtn');
@@ -216,7 +117,6 @@
       const centerBtn = document.getElementById('centerBtn');
       const clearBtn = document.getElementById('clearBtn');
       const historyBody = document.getElementById('historyBody');
-
       const latEl = document.getElementById('lat');
       const lngEl = document.getElementById('lng');
       const accuracyEl = document.getElementById('accuracy');
@@ -225,23 +125,22 @@
       const distanceEl = document.getElementById('distance');
 
       const map = L.map('map').setView([35.681236, 139.767125], 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
-
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
       const marker = L.marker([35.681236, 139.767125]).addTo(map);
       const polyline = L.polyline([], { color: '#3b82f6', weight: 4 }).addTo(map);
 
-      const MIN_ACCEPTABLE_ACCURACY_M = 120;
+      const MIN_ACCEPTABLE_ACCURACY_M = 150;
       const MAX_REASONABLE_SPEED_MPS = 55;
-      const STALE_TIMEOUT_MS = 20000;
+      const STALE_TIMEOUT_MS = 15000;
+      const EXTRA_POLL_MS = 2000;
 
       let watchId = null;
       let path = [];
       let totalDistanceM = 0;
       let lastUpdateAt = 0;
       let staleCheckTimer = null;
+      let extraPollTimer = null;
+      let deviceHeadingDeg = null;
 
       function setStatus(message, isError = false) {
         statusEl.textContent = message;
@@ -253,9 +152,39 @@
         return `${(mps * 3.6).toFixed(1)} km/h`;
       }
 
-      function formatHeading(deg) {
-        if (typeof deg !== 'number' || Number.isNaN(deg)) return '--';
-        return `${deg.toFixed(0)}°`;
+      function bearingDegrees(from, to) {
+        const toRad = (d) => (d * Math.PI) / 180;
+        const toDeg = (r) => (r * 180) / Math.PI;
+        const y = Math.sin(toRad(to.lng - from.lng)) * Math.cos(toRad(to.lat));
+        const x = Math.cos(toRad(from.lat)) * Math.sin(toRad(to.lat)) - Math.sin(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.cos(toRad(to.lng - from.lng));
+        return (toDeg(Math.atan2(y, x)) + 360) % 360;
+      }
+
+      function headingToCardinal(deg) {
+        const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        return dirs[Math.round(deg / 45) % 8];
+      }
+
+      function renderHeading(currentPoint) {
+        let heading = Number.isFinite(deviceHeadingDeg) ? deviceHeadingDeg : null;
+        let source = heading !== null ? '端末' : '';
+
+        if (heading === null && currentPoint && Number.isFinite(currentPoint.heading)) {
+          heading = currentPoint.heading;
+          source = 'GPS';
+        }
+
+        if (heading === null && path.length >= 2) {
+          heading = bearingDegrees(path[path.length - 2], path[path.length - 1]);
+          source = '移動';
+        }
+
+        if (heading === null) {
+          headingEl.textContent = '--';
+          return;
+        }
+
+        headingEl.textContent = `${Math.round(heading)}° ${headingToCardinal(heading)} (${source})`;
       }
 
       function haversineMeters(a, b) {
@@ -263,38 +192,48 @@
         const toRad = (d) => (d * Math.PI) / 180;
         const dLat = toRad(b.lat - a.lat);
         const dLng = toRad(b.lng - a.lng);
-        const aa =
-          Math.sin(dLat / 2) ** 2 +
-          Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+        const aa = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
         return 2 * R * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
       }
 
       function restartTrackingWatch() {
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-        }
-
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
           enableHighAccuracy: true,
           maximumAge: 0,
-          timeout: 15000,
+          timeout: 7000,
         });
+      }
+
+      function ensureExtraPoll() {
+        if (extraPollTimer !== null) return;
+        extraPollTimer = setInterval(() => {
+          if (watchId === null) return;
+          navigator.geolocation.getCurrentPosition(updatePosition, () => {}, {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 5000,
+          });
+        }, EXTRA_POLL_MS);
+      }
+
+      function clearExtraPoll() {
+        if (extraPollTimer !== null) {
+          clearInterval(extraPollTimer);
+          extraPollTimer = null;
+        }
       }
 
       function ensureStaleCheckTimer() {
         if (staleCheckTimer !== null) return;
-
         staleCheckTimer = setInterval(() => {
-          if (watchId === null) return;
-          if (!lastUpdateAt) return;
-
-          const staleMs = Date.now() - lastUpdateAt;
-          if (staleMs >= STALE_TIMEOUT_MS) {
-            setStatus('位置更新が止まったため、追跡を再接続しています...');
+          if (watchId === null || !lastUpdateAt) return;
+          if (Date.now() - lastUpdateAt >= STALE_TIMEOUT_MS) {
+            setStatus('更新が止まったため再接続しています...');
             restartTrackingWatch();
             lastUpdateAt = Date.now();
           }
-        }, 5000);
+        }, 3000);
       }
 
       function clearStaleCheckTimer() {
@@ -306,16 +245,12 @@
 
       function isLikelyGpsJump(point) {
         if (path.length === 0) return false;
-
         const prev = path[path.length - 1];
         const dtSec = Math.max((point.timestamp - prev.timestamp) / 1000, 1);
         const distanceM = haversineMeters(prev, point);
-        const calculatedSpeedMps = distanceM / dtSec;
-        const measuredSpeedMps = typeof point.speed === 'number' && !Number.isNaN(point.speed)
-          ? point.speed
-          : calculatedSpeedMps;
-
-        return calculatedSpeedMps > MAX_REASONABLE_SPEED_MPS && measuredSpeedMps > MAX_REASONABLE_SPEED_MPS;
+        const calcSpeed = distanceM / dtSec;
+        const sensorSpeed = Number.isFinite(point.speed) ? point.speed : calcSpeed;
+        return calcSpeed > MAX_REASONABLE_SPEED_MPS && sensorSpeed > MAX_REASONABLE_SPEED_MPS;
       }
 
       function renderHistory() {
@@ -323,16 +258,10 @@
           historyBody.innerHTML = '<tr><td colspan="4">まだ記録がありません。</td></tr>';
           return;
         }
-
         historyBody.innerHTML = '';
         path.slice(-20).reverse().forEach((point) => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${new Date(point.timestamp).toLocaleTimeString()}</td>
-            <td>${point.lat.toFixed(6)}</td>
-            <td>${point.lng.toFixed(6)}</td>
-            <td>${formatSpeed(point.speed)}</td>
-          `;
+          tr.innerHTML = `<td>${new Date(point.timestamp).toLocaleTimeString()}</td><td>${point.lat.toFixed(6)}</td><td>${point.lng.toFixed(6)}</td><td>${formatSpeed(point.speed)}</td>`;
           historyBody.appendChild(tr);
         });
       }
@@ -343,11 +272,13 @@
 
         if (typeof accuracy === 'number' && accuracy > MIN_ACCEPTABLE_ACCURACY_M) {
           setStatus(`精度が低いためスキップしました（±${Math.round(accuracy)}m）。`, true);
+          renderHeading(point);
           return;
         }
 
         if (isLikelyGpsJump(point)) {
           setStatus('急な座標ジャンプを検出したため、この点は除外しました。', true);
+          renderHeading(point);
           return;
         }
 
@@ -363,10 +294,8 @@
         lngEl.textContent = longitude.toFixed(6);
         accuracyEl.textContent = `${Math.round(accuracy)} m`;
         speedEl.textContent = formatSpeed(speed);
-        headingEl.textContent = formatHeading(heading);
-        distanceEl.textContent = totalDistanceM >= 1000
-          ? `${(totalDistanceM / 1000).toFixed(2)} km`
-          : `${Math.round(totalDistanceM)} m`;
+        renderHeading(point);
+        distanceEl.textContent = totalDistanceM >= 1000 ? `${(totalDistanceM / 1000).toFixed(2)} km` : `${Math.round(totalDistanceM)} m`;
 
         renderHistory();
         setStatus(`追跡中... ${new Date(pos.timestamp).toLocaleTimeString()} に更新`);
@@ -379,23 +308,53 @@
           3: '位置情報の取得がタイムアウトしました。',
         };
         setStatus(mapError[error.code] || '位置情報エラーが発生しました。', true);
-
         if (error.code === 3 && watchId !== null) {
           restartTrackingWatch();
           lastUpdateAt = Date.now();
         }
       }
 
-      function startTracking() {
+      async function enableDeviceOrientationIfNeeded() {
+        const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+        if (needsPermission) {
+          try {
+            const result = await DeviceOrientationEvent.requestPermission();
+            if (result !== 'granted') return;
+          } catch {
+            return;
+          }
+        }
+
+        window.addEventListener('deviceorientationabsolute', (event) => {
+          if (Number.isFinite(event.alpha)) {
+            deviceHeadingDeg = (360 - event.alpha + 360) % 360;
+            renderHeading(path[path.length - 1]);
+          }
+        });
+
+        window.addEventListener('deviceorientation', (event) => {
+          if (Number.isFinite(event.webkitCompassHeading)) {
+            deviceHeadingDeg = event.webkitCompassHeading;
+            renderHeading(path[path.length - 1]);
+          } else if (Number.isFinite(event.alpha) && deviceHeadingDeg === null) {
+            deviceHeadingDeg = (360 - event.alpha + 360) % 360;
+            renderHeading(path[path.length - 1]);
+          }
+        });
+      }
+
+      async function startTracking() {
         if (!('geolocation' in navigator)) {
           setStatus('このブラウザは位置情報 API に対応していません。', true);
           return;
         }
         if (watchId !== null) return;
 
+        await enableDeviceOrientationIfNeeded();
         restartTrackingWatch();
-        lastUpdateAt = Date.now();
+        ensureExtraPoll();
         ensureStaleCheckTimer();
+        lastUpdateAt = Date.now();
 
         startBtn.disabled = true;
         stopBtn.disabled = false;
@@ -407,6 +366,7 @@
           navigator.geolocation.clearWatch(watchId);
           watchId = null;
         }
+        clearExtraPoll();
         clearStaleCheckTimer();
         startBtn.disabled = false;
         stopBtn.disabled = true;
@@ -419,6 +379,7 @@
         polyline.setLatLngs([]);
         distanceEl.textContent = '0 m';
         renderHistory();
+        renderHeading(null);
         setStatus('軌跡をクリアしました。');
       }
 
@@ -433,6 +394,8 @@
           setStatus('まだ現在地データがありません。', true);
         }
       });
+
+      renderHeading(null);
     </script>
   </body>
 </html>
