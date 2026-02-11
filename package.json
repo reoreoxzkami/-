@@ -1,8 +1,8 @@
 {
-  "name": "ai-video-app",
+  "name": "realtime-gps-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Text-to-video web app powered by Replicate and Vercel Serverless Functions",
+  "description": "Realtime GPS tracking web app",
   "scripts": {
     "dev": "vercel dev",
     "start": "vercel dev"
