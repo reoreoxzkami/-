@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>お絵かきアプリ</title>
+    <title>シンプル ビデオ通話</title>
     <style>
       :root {
-        color-scheme: light;
-        --bg: #f4f7fb;
+        --bg: #f8fafc;
         --panel: #ffffff;
-        --text: #1f2937;
+        --text: #0f172a;
+        --muted: #475569;
         --border: #dbe3ef;
-        --accent: #2563eb;
+        --primary: #2563eb;
       }
 
       * {
@@ -20,273 +20,365 @@
 
       body {
         margin: 0;
+        padding: 16px;
         font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
         background: var(--bg);
         color: var(--text);
       }
 
       .app {
-        min-height: 100vh;
+        max-width: 960px;
+        margin: 0 auto;
         display: grid;
-        grid-template-rows: auto 1fr auto;
-      }
-
-      header,
-      footer {
-        padding: 16px 20px;
-        background: var(--panel);
-        border-bottom: 1px solid var(--border);
-      }
-
-      footer {
-        border-top: 1px solid var(--border);
-        border-bottom: none;
-        font-size: 14px;
-      }
-
-      h1 {
-        margin: 0;
-        font-size: clamp(20px, 2.6vw, 30px);
-      }
-
-      main {
-        display: grid;
-        gap: 14px;
-        align-content: start;
-        padding: 16px;
-      }
-
-      .toolbar {
-        display: flex;
-        flex-wrap: wrap;
         gap: 12px;
-        align-items: center;
+      }
+
+      .panel {
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: 12px;
         padding: 12px;
       }
 
-      .toolbar-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      h1 {
+        margin: 0;
+        font-size: clamp(20px, 3vw, 30px);
       }
 
-      button,
-      input[type="range"],
-      input[type="color"] {
-        cursor: pointer;
+      .note {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      input {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 14px;
       }
 
       button {
         border: 1px solid var(--border);
+        border-radius: 8px;
         background: white;
         color: var(--text);
         padding: 8px 12px;
-        border-radius: 8px;
         font-size: 14px;
+        cursor: pointer;
       }
 
       button.primary {
-        background: var(--accent);
+        background: var(--primary);
+        border-color: #1d4ed8;
         color: white;
-        border: 1px solid #1749b8;
       }
 
-      .board-wrap {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 10px;
-        overflow: auto;
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
       }
 
-      #board {
-        display: block;
-        width: min(100%, 1100px);
-        height: min(72vh, 760px);
-        touch-action: none;
-        background: white;
+      .videos {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+
+      video {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border: 1px solid #cbd5e1;
         border-radius: 10px;
-        border: 1px solid #d0d9e7;
+        background: #0f172a;
+        object-fit: cover;
       }
 
-      .size-label {
-        min-width: 70px;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .hint {
-        margin-left: auto;
-        font-size: 13px;
-        color: #4b5563;
-      }
-
-      @media (max-width: 720px) {
-        .hint {
-          width: 100%;
-          margin-left: 0;
-        }
+      .status {
+        margin: 0;
+        font-size: 14px;
+        color: #16a34a;
       }
     </style>
   </head>
   <body>
-    <div class="app">
-      <header>
-        <h1>🎨 お絵かきアプリ</h1>
-      </header>
-      <main>
-        <section class="toolbar" aria-label="描画ツール">
-          <div class="toolbar-group">
-            <label for="color">色</label>
-            <input id="color" type="color" value="#1f2937" />
-          </div>
-          <div class="toolbar-group">
-            <label for="size">太さ</label>
-            <input id="size" type="range" min="1" max="40" value="6" />
-            <span class="size-label" id="sizeLabel">6px</span>
-          </div>
-          <div class="toolbar-group">
-            <button id="penBtn" class="primary" type="button">ペン</button>
-            <button id="eraserBtn" type="button">消しゴム</button>
-          </div>
-          <div class="toolbar-group">
-            <button id="undoBtn" type="button">1つ戻す</button>
-            <button id="clearBtn" type="button">全消し</button>
-            <button id="downloadBtn" type="button">画像として保存</button>
-          </div>
-          <p class="hint">マウス／タッチで描画できます。</p>
-        </section>
+    <main class="app">
+      <section class="panel">
+        <h1>📹 シンプル ビデオ通話</h1>
+        <p class="note">同じルームIDを入力して、同じブラウザの別タブで開くと接続テストできます。</p>
+      </section>
 
-        <section class="board-wrap">
-          <canvas id="board" width="1100" height="760" aria-label="描画キャンバス"></canvas>
-        </section>
-      </main>
-      <footer>ヒント: 色・太さを変えて自由に描いてください。</footer>
-    </div>
+      <section class="panel">
+        <div class="controls">
+          <input id="roomInput" type="text" value="room-1" aria-label="ルームID" />
+          <button id="startBtn" class="primary" type="button">1. カメラ開始</button>
+          <button id="joinBtn" class="primary" type="button" disabled>2. ルーム参加</button>
+          <button id="muteBtn" type="button" disabled>マイクOFF</button>
+          <button id="camBtn" type="button" disabled>カメラOFF</button>
+          <button id="hangupBtn" type="button" disabled>切断</button>
+        </div>
+        <p id="status" class="status">準備OK: まず「カメラ開始」を押してください。</p>
+      </section>
+
+      <section class="panel videos">
+        <div>
+          <strong>あなた</strong>
+          <video id="localVideo" autoplay muted playsinline></video>
+        </div>
+        <div>
+          <strong>相手</strong>
+          <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+      </section>
+    </main>
 
     <script>
-      const canvas = document.getElementById("board");
-      const ctx = canvas.getContext("2d");
-      const colorInput = document.getElementById("color");
-      const sizeInput = document.getElementById("size");
-      const sizeLabel = document.getElementById("sizeLabel");
-      const penBtn = document.getElementById("penBtn");
-      const eraserBtn = document.getElementById("eraserBtn");
-      const undoBtn = document.getElementById("undoBtn");
-      const clearBtn = document.getElementById("clearBtn");
-      const downloadBtn = document.getElementById("downloadBtn");
+      const localVideo = document.getElementById("localVideo");
+      const remoteVideo = document.getElementById("remoteVideo");
+      const roomInput = document.getElementById("roomInput");
+      const startBtn = document.getElementById("startBtn");
+      const joinBtn = document.getElementById("joinBtn");
+      const muteBtn = document.getElementById("muteBtn");
+      const camBtn = document.getElementById("camBtn");
+      const hangupBtn = document.getElementById("hangupBtn");
+      const statusLabel = document.getElementById("status");
 
-      let drawing = false;
-      let lastPoint = null;
-      let isEraser = false;
-      const history = [];
-      const maxHistory = 30;
+      const myId = crypto.randomUUID();
+      const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-      function pushHistory() {
-        if (history.length >= maxHistory) {
-          history.shift();
+      let localStream = null;
+      let pc = null;
+      let channel = null;
+      let remoteId = null;
+      let isInitiator = false;
+      let pendingCandidates = [];
+      let audioOn = true;
+      let videoOn = true;
+
+      function setStatus(message, isError = false) {
+        statusLabel.textContent = message;
+        statusLabel.style.color = isError ? "#dc2626" : "#16a34a";
+      }
+
+      function updateButtons() {
+        const hasStream = Boolean(localStream);
+        const hasPc = Boolean(pc);
+        startBtn.disabled = hasStream;
+        joinBtn.disabled = !hasStream || Boolean(channel);
+        muteBtn.disabled = !hasStream;
+        camBtn.disabled = !hasStream;
+        hangupBtn.disabled = !hasStream && !hasPc && !channel;
+      }
+
+      function send(message) {
+        if (!channel) {
+          return;
         }
-        history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        channel.postMessage({ ...message, from: myId, to: remoteId });
       }
 
-      function setToolMode() {
-        penBtn.classList.toggle("primary", !isEraser);
-        eraserBtn.classList.toggle("primary", isEraser);
+      async function maybeCreateOffer() {
+        if (!pc || !isInitiator || !remoteId || pc.signalingState !== "stable") {
+          return;
+        }
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        send({ type: "offer", sdp: pc.localDescription });
+        setStatus("オファー送信中...");
       }
 
-      function getPointFromEvent(event) {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        return {
-          x: (event.clientX - rect.left) * scaleX,
-          y: (event.clientY - rect.top) * scaleY
+      function ensurePeerConnection() {
+        if (pc) {
+          return;
+        }
+
+        pc = new RTCPeerConnection(rtcConfig);
+        pendingCandidates = [];
+
+        localStream.getTracks().forEach((track) => {
+          pc.addTrack(track, localStream);
+        });
+
+        pc.addEventListener("track", (event) => {
+          remoteVideo.srcObject = event.streams[0];
+        });
+
+        pc.addEventListener("icecandidate", (event) => {
+          if (event.candidate) {
+            send({ type: "candidate", candidate: event.candidate.toJSON() });
+          }
+        });
+
+        pc.addEventListener("connectionstatechange", () => {
+          if (pc.connectionState === "connected") {
+            setStatus("接続できました。通話中です。", false);
+          } else if (pc.connectionState === "failed") {
+            setStatus("接続に失敗しました。切断してやり直してください。", true);
+          }
+        });
+      }
+
+      async function startCamera() {
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localVideo.srcObject = localStream;
+          setStatus("カメラ開始完了。次にルーム参加を押してください。");
+          updateButtons();
+        } catch (error) {
+          setStatus("カメラ・マイクを開始できませんでした。権限を確認してください。", true);
+          console.error(error);
+        }
+      }
+
+      async function handleSignal(message) {
+        if (message.from === myId) {
+          return;
+        }
+        if (message.to && message.to !== myId) {
+          return;
+        }
+
+        if (!remoteId) {
+          remoteId = message.from;
+          isInitiator = myId > remoteId;
+          setStatus(`相手を検出: 接続準備中 (${isInitiator ? "発信側" : "応答側"})`);
+        }
+
+        ensurePeerConnection();
+
+        if (message.type === "hello") {
+          await maybeCreateOffer();
+          return;
+        }
+
+        if (message.type === "offer") {
+          await pc.setRemoteDescription(message.sdp);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          send({ type: "answer", sdp: pc.localDescription });
+
+          for (const c of pendingCandidates) {
+            await pc.addIceCandidate(c);
+          }
+          pendingCandidates = [];
+
+          setStatus("オファー受信→アンサー送信しました。");
+          return;
+        }
+
+        if (message.type === "answer") {
+          await pc.setRemoteDescription(message.sdp);
+          for (const c of pendingCandidates) {
+            await pc.addIceCandidate(c);
+          }
+          pendingCandidates = [];
+          setStatus("アンサー受信。接続待機中...");
+          return;
+        }
+
+        if (message.type === "candidate") {
+          if (pc.remoteDescription) {
+            await pc.addIceCandidate(message.candidate);
+          } else {
+            pendingCandidates.push(message.candidate);
+          }
+          return;
+        }
+
+        if (message.type === "leave") {
+          remoteVideo.srcObject = null;
+          setStatus("相手が切断しました。", true);
+        }
+      }
+
+      function joinRoom() {
+        const roomId = roomInput.value.trim();
+        if (!roomId) {
+          setStatus("ルームIDを入力してください。", true);
+          return;
+        }
+
+        channel = new BroadcastChannel(`webrtc-room-${roomId}`);
+        channel.onmessage = async (event) => {
+          try {
+            await handleSignal(event.data);
+          } catch (error) {
+            setStatus("シグナリング処理に失敗しました。", true);
+            console.error(error);
+          }
         };
+
+        setStatus("ルーム参加完了。相手を待っています...");
+        send({ type: "hello", to: null });
+        updateButtons();
       }
 
-      function drawLine(from, to) {
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.lineWidth = Number(sizeInput.value);
-        ctx.strokeStyle = isEraser ? "#ffffff" : colorInput.value;
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.lineTo(to.x, to.y);
-        ctx.stroke();
-      }
-
-      function handlePointerDown(event) {
-        event.preventDefault();
-        drawing = true;
-        lastPoint = getPointFromEvent(event);
-        pushHistory();
-      }
-
-      function handlePointerMove(event) {
-        if (!drawing) {
+      function toggleMute() {
+        if (!localStream) {
           return;
         }
-        event.preventDefault();
-        const current = getPointFromEvent(event);
-        drawLine(lastPoint, current);
-        lastPoint = current;
+        audioOn = !audioOn;
+        localStream.getAudioTracks().forEach((track) => {
+          track.enabled = audioOn;
+        });
+        muteBtn.textContent = audioOn ? "マイクOFF" : "マイクON";
       }
 
-      function stopDrawing() {
-        drawing = false;
-        lastPoint = null;
-      }
-
-      function clearCanvas() {
-        pushHistory();
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      function undo() {
-        if (history.length === 0) {
+      function toggleCamera() {
+        if (!localStream) {
           return;
         }
-        const image = history.pop();
-        ctx.putImageData(image, 0, 0);
+        videoOn = !videoOn;
+        localStream.getVideoTracks().forEach((track) => {
+          track.enabled = videoOn;
+        });
+        camBtn.textContent = videoOn ? "カメラOFF" : "カメラON";
       }
 
-      function downloadImage() {
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        link.download = `oekaki-${Date.now()}.png`;
-        link.click();
+      function hangup() {
+        if (channel) {
+          send({ type: "leave" });
+          channel.close();
+          channel = null;
+        }
+
+        if (pc) {
+          pc.close();
+          pc = null;
+        }
+
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+          localStream = null;
+        }
+
+        remoteVideo.srcObject = null;
+        localVideo.srcObject = null;
+        remoteId = null;
+        isInitiator = false;
+        pendingCandidates = [];
+        audioOn = true;
+        videoOn = true;
+        muteBtn.textContent = "マイクOFF";
+        camBtn.textContent = "カメラOFF";
+        setStatus("切断しました。最初からやり直せます。");
+        updateButtons();
       }
 
-      function resizeLabel() {
-        sizeLabel.textContent = `${sizeInput.value}px`;
-      }
+      startBtn.addEventListener("click", startCamera);
+      joinBtn.addEventListener("click", joinRoom);
+      muteBtn.addEventListener("click", toggleMute);
+      camBtn.addEventListener("click", toggleCamera);
+      hangupBtn.addEventListener("click", hangup);
 
-      canvas.addEventListener("pointerdown", handlePointerDown);
-      canvas.addEventListener("pointermove", handlePointerMove);
-      window.addEventListener("pointerup", stopDrawing);
-      window.addEventListener("pointercancel", stopDrawing);
-      sizeInput.addEventListener("input", resizeLabel);
-
-      penBtn.addEventListener("click", () => {
-        isEraser = false;
-        setToolMode();
-      });
-
-      eraserBtn.addEventListener("click", () => {
-        isEraser = true;
-        setToolMode();
-      });
-
-      undoBtn.addEventListener("click", undo);
-      clearBtn.addEventListener("click", clearCanvas);
-      downloadBtn.addEventListener("click", downloadImage);
-
-      clearCanvas();
-      resizeLabel();
-      setToolMode();
+      updateButtons();
     </script>
   </body>
 </html>
