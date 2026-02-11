@@ -189,7 +189,7 @@
       const MAX_REASONABLE_SPEED_MPS = 55;
       const MIN_MOVEMENT_FOR_BEARING_M = 1;
       const STALE_TIMEOUT_MS = 25000;
-      const EXTRA_POLL_MS = 3000;
+      const EXTRA_POLL_MS = 1000;
       const SPEED_WINDOW_MS = 12000;
       const MIN_SPEED_DT_SEC = 2;
       const MIN_MOVEMENT_FOR_SPEED_M = 1.5;
@@ -322,8 +322,8 @@
         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
           enableHighAccuracy: true,
-          maximumAge: 2000,
-          timeout: 20000,
+          maximumAge: 500,
+          timeout: 12000,
         });
       }
 
@@ -335,8 +335,8 @@
             if (error.code !== 3) handleError(error);
           }, {
             enableHighAccuracy: true,
-            maximumAge: 2000,
-            timeout: 12000,
+            maximumAge: 500,
+            timeout: 7000,
           });
         }, EXTRA_POLL_MS);
       }
@@ -350,7 +350,7 @@
 
       function ensureSpeedTicker() {
         if (speedTickerTimer !== null) return;
-        speedTickerTimer = setInterval(renderSpeed, 500);
+        speedTickerTimer = setInterval(renderSpeed, 250);
       }
 
       function clearSpeedTicker() {
@@ -369,7 +369,7 @@
             restartTrackingWatch();
             lastUpdateAt = Date.now();
           }
-        }, 4000);
+        }, 2000);
       }
 
       function clearStaleCheckTimer() {
@@ -481,7 +481,7 @@
         lastRawPoint = point;
         marker.setLatLng([latitude, longitude]);
         polyline.setLatLngs(path.map((p) => [p.lat, p.lng]));
-        map.panTo([latitude, longitude], { animate: true });
+        map.panTo([latitude, longitude], { animate: false });
 
         latEl.textContent = latitude.toFixed(6);
         lngEl.textContent = longitude.toFixed(6);
@@ -554,6 +554,11 @@
 
         await enableDeviceOrientationIfNeeded();
         restartTrackingWatch();
+        navigator.geolocation.getCurrentPosition(updatePosition, () => {}, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 5000,
+        });
         ensureExtraPoll();
         ensureStaleCheckTimer();
         ensureSpeedTicker();
