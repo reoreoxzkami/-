@@ -47,6 +47,61 @@
       .metric { border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem; background: #10192b; }
       .label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.15rem; }
       .value { font-size: 1.02rem; font-weight: 700; }
+
+      .compass-wrap {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.8rem;
+        background: #10192b;
+      }
+      .compass {
+        width: 130px;
+        height: 130px;
+        border: 2px solid #37507e;
+        border-radius: 999px;
+        margin: 0 auto;
+        position: relative;
+        background: radial-gradient(circle at center, #1f2f52 0%, #121d34 70%);
+        box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.03);
+      }
+      .compass-needle {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 4px;
+        height: 52px;
+        transform-origin: 50% calc(100% - 6px);
+        transform: translate(-50%, -100%) rotate(0deg);
+        transition: transform 180ms ease-out;
+        border-radius: 4px;
+        background: linear-gradient(to top, #e2e8f0 45%, #f87171 45%);
+      }
+      .compass-center {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        transform: translate(-50%, -50%);
+      }
+      .compass-mark {
+        position: absolute;
+        font-size: 0.72rem;
+        color: #dbeafe;
+        font-weight: 700;
+      }
+      .mark-n { left: 50%; top: 5px; transform: translateX(-50%); color: #fca5a5; }
+      .mark-e { right: 7px; top: 50%; transform: translateY(-50%); }
+      .mark-s { left: 50%; bottom: 5px; transform: translateX(-50%); }
+      .mark-w { left: 7px; top: 50%; transform: translateY(-50%); }
+      .compass-readout {
+        text-align: center;
+        margin-top: 0.55rem;
+        font-weight: 700;
+      }
+
       .history { margin-top: 0.8rem; max-height: 250px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
       table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
       th, td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid #213150; white-space: nowrap; }
@@ -58,7 +113,7 @@
     <main class="container">
       <section class="card">
         <h1>📍 リアルタイムGPSアプリ（単一HTML版）</h1>
-        <p>向きの表示安定化（GPS/移動方位優先）と、タイムアウトが出にくい追跡設定に調整済みです。</p>
+        <p>方角をコンパス表示に変更し、速度はGPS値+推定値で常時表示するように改善しました。</p>
       </section>
 
       <section class="layout">
@@ -76,9 +131,20 @@
             <div class="metric"><span class="label">緯度</span><span class="value" id="lat">--</span></div>
             <div class="metric"><span class="label">経度</span><span class="value" id="lng">--</span></div>
             <div class="metric"><span class="label">精度</span><span class="value" id="accuracy">--</span></div>
-            <div class="metric"><span class="label">速度</span><span class="value" id="speed">--</span></div>
-            <div class="metric"><span class="label">向き（常時）</span><span class="value" id="heading">取得待ち</span></div>
+            <div class="metric"><span class="label">速度（常時更新）</span><span class="value" id="speed">0.0 km/h</span></div>
             <div class="metric"><span class="label">累計距離</span><span class="value" id="distance">0 m</span></div>
+            <div class="compass-wrap">
+              <span class="label">向き（コンパス）</span>
+              <div class="compass" aria-hidden="true">
+                <div class="compass-mark mark-n">N</div>
+                <div class="compass-mark mark-e">E</div>
+                <div class="compass-mark mark-s">S</div>
+                <div class="compass-mark mark-w">W</div>
+                <div id="compassNeedle" class="compass-needle"></div>
+                <div class="compass-center"></div>
+              </div>
+              <div id="headingText" class="compass-readout">取得待ち</div>
+            </div>
           </div>
 
           <div class="history">
@@ -91,7 +157,7 @@
       </section>
 
       <section class="card footnote">
-        位置情報は HTTPS（または localhost）で利用できます。端末方位は機種・権限状態で取得できないことがあります。
+        位置情報は HTTPS（または localhost）で利用できます。端末方位が取れない場合は移動方位でコンパスを表示します。
       </section>
     </main>
 
@@ -107,8 +173,9 @@
       const lngEl = document.getElementById('lng');
       const accuracyEl = document.getElementById('accuracy');
       const speedEl = document.getElementById('speed');
-      const headingEl = document.getElementById('heading');
+      const headingTextEl = document.getElementById('headingText');
       const distanceEl = document.getElementById('distance');
+      const compassNeedleEl = document.getElementById('compassNeedle');
 
       const map = L.map('map').setView([35.681236, 139.767125], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -122,7 +189,7 @@
       const MAX_REASONABLE_SPEED_MPS = 55;
       const MIN_MOVEMENT_FOR_BEARING_M = 3;
       const STALE_TIMEOUT_MS = 25000;
-      const EXTRA_POLL_MS = 5000;
+      const EXTRA_POLL_MS = 3000;
 
       let watchId = null;
       let path = [];
@@ -130,25 +197,26 @@
       let lastUpdateAt = 0;
       let staleCheckTimer = null;
       let extraPollTimer = null;
+      let speedDecayTimer = null;
 
       let deviceHeadingDeg = null;
       let lastHeading = null;
       let lastHeadingSource = '';
-      let lastHeadingAt = 0;
+      let currentSpeedMps = 0;
 
       function setStatus(message, isError = false) {
         statusEl.textContent = message;
         statusEl.classList.toggle('error', isError);
       }
 
-      function formatSpeed(mps) {
-        if (typeof mps !== 'number' || Number.isNaN(mps)) return '--';
-        return `${(mps * 3.6).toFixed(1)} km/h`;
-      }
-
       function headingToCardinal(deg) {
         const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
         return dirs[Math.round(deg / 45) % 8];
+      }
+
+      function formatSpeedFromMps(mps) {
+        const safe = Math.max(0, Number.isFinite(mps) ? mps : 0);
+        return `${(safe * 3.6).toFixed(1)} km/h`;
       }
 
       function bearingDegrees(from, to) {
@@ -174,8 +242,8 @@
         const normalized = ((deg % 360) + 360) % 360;
         lastHeading = normalized;
         lastHeadingSource = source;
-        lastHeadingAt = Date.now();
-        headingEl.textContent = `${Math.round(normalized)}° ${headingToCardinal(normalized)} (${source})`;
+        compassNeedleEl.style.transform = `translate(-50%, -100%) rotate(${normalized}deg)`;
+        headingTextEl.textContent = `${Math.round(normalized)}° ${headingToCardinal(normalized)} (${source})`;
       }
 
       function renderHeading(currentPoint = null) {
@@ -201,11 +269,16 @@
         }
 
         if (Number.isFinite(lastHeading)) {
-          headingEl.textContent = `${Math.round(lastHeading)}° ${headingToCardinal(lastHeading)} (${lastHeadingSource}:保持)`;
+          headingTextEl.textContent = `${Math.round(lastHeading)}° ${headingToCardinal(lastHeading)} (${lastHeadingSource}:保持)`;
           return;
         }
 
-        headingEl.textContent = '取得待ち';
+        headingTextEl.textContent = '取得待ち';
+      }
+
+      function updateSpeedDisplay(mps) {
+        currentSpeedMps = Math.max(0, Number.isFinite(mps) ? mps : 0);
+        speedEl.textContent = formatSpeedFromMps(currentSpeedMps);
       }
 
       function restartTrackingWatch() {
@@ -235,6 +308,27 @@
         if (extraPollTimer !== null) {
           clearInterval(extraPollTimer);
           extraPollTimer = null;
+        }
+      }
+
+      function ensureSpeedDecay() {
+        if (speedDecayTimer !== null) return;
+        speedDecayTimer = setInterval(() => {
+          if (watchId === null) return;
+          const staleSec = (Date.now() - lastUpdateAt) / 1000;
+          if (staleSec > 3 && currentSpeedMps > 0) {
+            updateSpeedDisplay(currentSpeedMps * 0.7);
+          }
+          if (staleSec > 10) {
+            updateSpeedDisplay(0);
+          }
+        }, 1000);
+      }
+
+      function clearSpeedDecay() {
+        if (speedDecayTimer !== null) {
+          clearInterval(speedDecayTimer);
+          speedDecayTimer = null;
         }
       }
 
@@ -275,14 +369,23 @@
         historyBody.innerHTML = '';
         path.slice(-20).reverse().forEach((point) => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${new Date(point.timestamp).toLocaleTimeString()}</td><td>${point.lat.toFixed(6)}</td><td>${point.lng.toFixed(6)}</td><td>${formatSpeed(point.speed)}</td>`;
+          tr.innerHTML = `<td>${new Date(point.timestamp).toLocaleTimeString()}</td><td>${point.lat.toFixed(6)}</td><td>${point.lng.toFixed(6)}</td><td>${formatSpeedFromMps(point.speedMps)}</td>`;
           historyBody.appendChild(tr);
         });
       }
 
+      function resolveSpeedMps(point) {
+        if (Number.isFinite(point.speed) && point.speed >= 0) return point.speed;
+        if (path.length === 0) return 0;
+        const prev = path[path.length - 1];
+        const dtSec = Math.max((point.timestamp - prev.timestamp) / 1000, 1);
+        const distanceM = haversineMeters(prev, point);
+        return distanceM / dtSec;
+      }
+
       function updatePosition(pos) {
         const { latitude, longitude, accuracy, speed, heading } = pos.coords;
-        const point = { lat: latitude, lng: longitude, speed, heading, timestamp: pos.timestamp };
+        const point = { lat: latitude, lng: longitude, speed, heading, timestamp: pos.timestamp, speedMps: 0 };
 
         if (typeof accuracy === 'number' && accuracy > MIN_ACCEPTABLE_ACCURACY_M) {
           setStatus(`精度が低いためスキップしました（±${Math.round(accuracy)}m）。`, true);
@@ -298,6 +401,7 @@
 
         if (path.length > 0) totalDistanceM += haversineMeters(path[path.length - 1], point);
 
+        point.speedMps = resolveSpeedMps(point);
         lastUpdateAt = Date.now();
         path.push(point);
         marker.setLatLng([latitude, longitude]);
@@ -307,7 +411,7 @@
         latEl.textContent = latitude.toFixed(6);
         lngEl.textContent = longitude.toFixed(6);
         accuracyEl.textContent = `${Math.round(accuracy)} m`;
-        speedEl.textContent = formatSpeed(speed);
+        updateSpeedDisplay(point.speedMps);
         renderHeading(point);
         distanceEl.textContent = totalDistanceM >= 1000
           ? `${(totalDistanceM / 1000).toFixed(2)} km`
@@ -378,6 +482,7 @@
         restartTrackingWatch();
         ensureExtraPoll();
         ensureStaleCheckTimer();
+        ensureSpeedDecay();
         lastUpdateAt = Date.now();
 
         startBtn.disabled = true;
@@ -392,6 +497,8 @@
         }
         clearExtraPoll();
         clearStaleCheckTimer();
+        clearSpeedDecay();
+        updateSpeedDisplay(0);
         startBtn.disabled = false;
         stopBtn.disabled = true;
         setStatus('追跡を停止しました。');
@@ -402,6 +509,7 @@
         totalDistanceM = 0;
         polyline.setLatLngs([]);
         distanceEl.textContent = '0 m';
+        updateSpeedDisplay(0);
         renderHistory();
         renderHeading();
         setStatus('軌跡をクリアしました。');
@@ -420,6 +528,7 @@
       });
 
       renderHeading();
+      updateSpeedDisplay(0);
     </script>
   </body>
 </html>
