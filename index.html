@@ -233,9 +233,15 @@
       const marker = L.marker([35.681236, 139.767125]).addTo(map);
       const polyline = L.polyline([], { color: '#3b82f6', weight: 4 }).addTo(map);
 
+      const MIN_ACCEPTABLE_ACCURACY_M = 120;
+      const MAX_REASONABLE_SPEED_MPS = 55;
+      const STALE_TIMEOUT_MS = 20000;
+
       let watchId = null;
       let path = [];
       let totalDistanceM = 0;
+      let lastUpdateAt = 0;
+      let staleCheckTimer = null;
 
       function setStatus(message, isError = false) {
         statusEl.textContent = message;
@@ -263,6 +269,55 @@
         return 2 * R * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
       }
 
+      function restartTrackingWatch() {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+
+        watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 15000,
+        });
+      }
+
+      function ensureStaleCheckTimer() {
+        if (staleCheckTimer !== null) return;
+
+        staleCheckTimer = setInterval(() => {
+          if (watchId === null) return;
+          if (!lastUpdateAt) return;
+
+          const staleMs = Date.now() - lastUpdateAt;
+          if (staleMs >= STALE_TIMEOUT_MS) {
+            setStatus('位置更新が止まったため、追跡を再接続しています...');
+            restartTrackingWatch();
+            lastUpdateAt = Date.now();
+          }
+        }, 5000);
+      }
+
+      function clearStaleCheckTimer() {
+        if (staleCheckTimer !== null) {
+          clearInterval(staleCheckTimer);
+          staleCheckTimer = null;
+        }
+      }
+
+      function isLikelyGpsJump(point) {
+        if (path.length === 0) return false;
+
+        const prev = path[path.length - 1];
+        const dtSec = Math.max((point.timestamp - prev.timestamp) / 1000, 1);
+        const distanceM = haversineMeters(prev, point);
+        const calculatedSpeedMps = distanceM / dtSec;
+        const measuredSpeedMps = typeof point.speed === 'number' && !Number.isNaN(point.speed)
+          ? point.speed
+          : calculatedSpeedMps;
+
+        return calculatedSpeedMps > MAX_REASONABLE_SPEED_MPS && measuredSpeedMps > MAX_REASONABLE_SPEED_MPS;
+      }
+
       function renderHistory() {
         if (path.length === 0) {
           historyBody.innerHTML = '<tr><td colspan="4">まだ記録がありません。</td></tr>';
@@ -286,8 +341,19 @@
         const { latitude, longitude, accuracy, speed, heading } = pos.coords;
         const point = { lat: latitude, lng: longitude, speed, heading, timestamp: pos.timestamp };
 
+        if (typeof accuracy === 'number' && accuracy > MIN_ACCEPTABLE_ACCURACY_M) {
+          setStatus(`精度が低いためスキップしました（±${Math.round(accuracy)}m）。`, true);
+          return;
+        }
+
+        if (isLikelyGpsJump(point)) {
+          setStatus('急な座標ジャンプを検出したため、この点は除外しました。', true);
+          return;
+        }
+
         if (path.length > 0) totalDistanceM += haversineMeters(path[path.length - 1], point);
 
+        lastUpdateAt = Date.now();
         path.push(point);
         marker.setLatLng([latitude, longitude]);
         polyline.setLatLngs(path.map((p) => [p.lat, p.lng]));
@@ -313,6 +379,11 @@
           3: '位置情報の取得がタイムアウトしました。',
         };
         setStatus(mapError[error.code] || '位置情報エラーが発生しました。', true);
+
+        if (error.code === 3 && watchId !== null) {
+          restartTrackingWatch();
+          lastUpdateAt = Date.now();
+        }
       }
 
       function startTracking() {
@@ -322,11 +393,9 @@
         }
         if (watchId !== null) return;
 
-        watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
-          enableHighAccuracy: true,
-          maximumAge: 1000,
-          timeout: 10000,
-        });
+        restartTrackingWatch();
+        lastUpdateAt = Date.now();
+        ensureStaleCheckTimer();
 
         startBtn.disabled = true;
         stopBtn.disabled = false;
@@ -338,6 +407,7 @@
           navigator.geolocation.clearWatch(watchId);
           watchId = null;
         }
+        clearStaleCheckTimer();
         startBtn.disabled = false;
         stopBtn.disabled = true;
         setStatus('追跡を停止しました。');
