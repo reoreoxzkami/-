@@ -1,108 +1,33 @@
-# AI Video App (Replicate + Vercel)
+# リアルタイムGPSアプリ
 
-初心者向けに、**Text → Video** 生成アプリを最短で公開できる構成です。  
-フロントは `index.html` 単体、バックエンドは `api/generate.js`（Vercel Serverless Functions）です。
+ブラウザの位置情報 API を使って、現在地をリアルタイム追跡するシンプルな Web アプリです。
 
-## 構成
+## 主な機能
 
-```
-ai-video-app/
- ├ index.html
- ├ api/
- │   └ generate.js
- ├ package.json
- ├ vercel.json
- └ README.md
-```
+- 現在地（緯度・経度）をリアルタイム表示
+- OpenStreetMap 上に現在地を表示
+- 移動軌跡をポリラインで可視化
+- 移動速度・方角・GPS 精度を表示
+- 累計移動距離を自動計算
+- 位置履歴（最新20件）を表示
 
-## 1) 事前準備
-
-- GitHub アカウント
-- Vercel アカウント（GitHub 連携できる状態）
-- Replicate アカウント + API トークン
-
-## 2) ローカルで動作確認
+## ローカル実行
 
 ```bash
 npm install
 npm run dev
 ```
 
-ブラウザで `http://localhost:3000` を開く。
+`http://localhost:3000` にアクセスします。
 
-> API を叩くには、Vercel 環境変数 `REPLICATE_API_TOKEN` が必要です。ローカル開発時は `vercel env add` で設定できます。
+## 使い方
 
-## 3) GitHub リポジトリ作成と push
+1. 「追跡開始」を押す
+2. ブラウザの位置情報許可を「許可」にする
+3. 地図とメトリクスがリアルタイム更新される
+4. 「追跡停止」で終了、「軌跡クリア」で記録をリセット
 
-```bash
-git init
-git add .
-git commit -m "feat: initial ai video app"
-git branch -M main
-git remote add origin https://github.com/<YOUR_NAME>/<YOUR_REPO>.git
-git push -u origin main
-```
+## 注意点
 
-## 4) Vercel 連携（自動デプロイ）
-
-1. Vercel ダッシュボードで **Add New Project**
-2. GitHub のこのリポジトリを選択
-3. Framework Preset は **Other** でOK
-4. Deploy を実行
-
-以後、`main` ブランチに push するたびに自動デプロイされます。
-
-## 5) 環境変数設定
-
-Vercel プロジェクトの **Settings → Environment Variables** で以下を設定:
-
-- `REPLICATE_API_TOKEN` = Replicate の API トークン
-
-設定後、再デプロイしてください。
-
-## 6) API 仕様
-
-### `POST /api/generate`
-
-リクエスト例:
-
-```json
-{
-  "prompt": "cinematic drone shot of neon Tokyo street in rainy night",
-  "resolution": "768x432",
-  "seconds": 3,
-  "seed": 12345
-}
-```
-
-レスポンス例:
-
-```json
-{
-  "videoUrl": "https://...mp4",
-  "predictionId": "..."
-}
-```
-
-処理内容:
-1. `POST https://api.replicate.com/v1/predictions` で予測を作成
-2. `GET https://api.replicate.com/v1/predictions/{id}` でポーリング
-3. 完了後 output の動画 URL を返却
-
-## 7) 更新運用
-
-普段の更新はこれだけです。
-
-```bash
-git add .
-git commit -m "feat: update ui"
-git push
-```
-
-`git push` すると Vercel が自動でビルド・公開し、新しい URL が発行されます（Production へ反映）。
-
-## 注意
-
-- API トークンは必ずサーバ側（Vercel 環境変数）だけで管理する
-- フロントに直接書かない
-- 生成時間はモデル・混雑状況で前後します
+- 位置情報取得は HTTPS（または localhost）環境で動作します。
+- 実機スマホで使うと GPS 精度が高くなります。

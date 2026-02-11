@@ -3,319 +3,394 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Video Generator (Replicate + Vercel)</title>
+    <title>リアルタイムGPSトラッカー</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     <style>
       :root {
         color-scheme: dark;
-        --bg: #0b1020;
-        --card: #141a2b;
-        --text: #e9ecf4;
-        --muted: #99a2ba;
-        --accent: #6d8dff;
-        --accent-hover: #5c7df8;
-        --danger: #ff6b6b;
-        --border: #2a324b;
+        --bg: #0b1220;
+        --card: #151f33;
+        --text: #e8eefc;
+        --muted: #9eadcc;
+        --accent: #3b82f6;
+        --accent-2: #22c55e;
+        --danger: #f87171;
+        --border: #2b3a59;
       }
 
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        font-family: Inter, system-ui, -apple-system, sans-serif;
-        background: radial-gradient(circle at 20% 10%, #1c2644 0, var(--bg) 35%);
+        font-family: Inter, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+        background: radial-gradient(circle at 10% 0%, #17294d 0, var(--bg) 40%);
         color: var(--text);
-        min-height: 100vh;
       }
 
       .container {
-        width: min(960px, 92%);
-        margin: 2.5rem auto;
+        width: min(1100px, 94%);
+        margin: 1.5rem auto 2rem;
         display: grid;
         gap: 1rem;
       }
 
       .card {
-        background: color-mix(in hsl, var(--card) 90%, black);
+        background: color-mix(in hsl, var(--card) 92%, black);
         border: 1px solid var(--border);
         border-radius: 14px;
         padding: 1rem;
       }
 
-      h1, h2 { margin: 0 0 .75rem; }
-      p { color: var(--muted); margin-top: 0; }
+      h1,
+      h2 {
+        margin: 0 0 0.7rem;
+      }
 
-      .grid {
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .layout {
         display: grid;
-        gap: 0.75rem;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        grid-template-columns: 1fr;
       }
 
-      label {
-        display: flex;
-        flex-direction: column;
-        gap: .4rem;
-        font-size: .92rem;
+      @media (min-width: 900px) {
+        .layout {
+          grid-template-columns: 1.45fr 1fr;
+        }
       }
 
-      input, select, button, textarea {
-        background: #0f1527;
+      #map {
+        width: 100%;
+        height: min(62vh, 520px);
+        border-radius: 12px;
         border: 1px solid var(--border);
-        color: var(--text);
-        border-radius: 10px;
-        padding: .7rem .8rem;
-        font-size: 0.95rem;
       }
 
-      textarea {
-        min-height: 110px;
-        resize: vertical;
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-bottom: 0.9rem;
       }
 
       button {
-        cursor: pointer;
-        background: var(--accent);
         border: none;
-        font-weight: 600;
+        background: var(--accent);
+        color: white;
+        border-radius: 10px;
+        padding: 0.65rem 0.95rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
       }
-      button:hover { background: var(--accent-hover); }
-      button:disabled { opacity: .65; cursor: wait; }
+
+      button.secondary {
+        background: #334155;
+      }
+
+      button.success {
+        background: var(--accent-2);
+      }
+
+      button:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
 
       .status {
-        min-height: 1.3rem;
+        min-height: 1.4rem;
         color: var(--muted);
       }
 
-      .status.error { color: var(--danger); }
+      .status.error {
+        color: var(--danger);
+      }
 
-      .result video {
+      .grid {
+        display: grid;
+        gap: 0.65rem;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      .metric {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.7rem;
+        background: #10192b;
+      }
+
+      .label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-bottom: 0.15rem;
+      }
+
+      .value {
+        font-size: 1.02rem;
+        font-weight: 700;
+      }
+
+      .history {
+        margin-top: 0.8rem;
+        max-height: 250px;
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+
+      table {
         width: 100%;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        margin-top: .7rem;
+        border-collapse: collapse;
+        font-size: 0.84rem;
       }
 
-      .history-list {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        display: grid;
-        gap: .75rem;
+      th,
+      td {
+        text-align: left;
+        padding: 0.45rem 0.5rem;
+        border-bottom: 1px solid #213150;
+        white-space: nowrap;
       }
 
-      .history-item {
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: .75rem;
-        display: grid;
-        gap: .5rem;
+      th {
+        position: sticky;
+        top: 0;
+        background: #172540;
+        z-index: 1;
       }
 
-      .meta {
-        display: flex;
-        gap: .75rem;
-        flex-wrap: wrap;
-        color: var(--muted);
-        font-size: .86rem;
-      }
-
-      .actions {
-        display: flex;
-        gap: .6rem;
-        flex-wrap: wrap;
-      }
-
-      .secondary {
-        background: #222b43;
-      }
-
-      .empty {
+      .footnote {
+        font-size: 0.8rem;
         color: var(--muted);
       }
-
-      .footer { color: var(--muted); font-size: .85rem; text-align: center; }
     </style>
   </head>
   <body>
     <main class="container">
       <section class="card">
-        <h1>🎬 AI Video Generator</h1>
-        <p>Replicate の zeroscope-v2 を使って、テキストから動画を生成します。</p>
+        <h1>📍 リアルタイムGPSトラッカー</h1>
+        <p>現在地をリアルタイム表示し、移動軌跡・移動距離・速度を記録します。</p>
+      </section>
 
-        <form id="videoForm">
-          <label>
-            プロンプト
-            <textarea id="prompt" required placeholder="例: cinematic drone shot of neon Tokyo street in rainy night"></textarea>
-          </label>
+      <section class="layout">
+        <section class="card">
+          <div id="map" aria-label="地図"></div>
+        </section>
 
-          <div class="grid">
-            <label>
-              解像度
-              <select id="resolution">
-                <option value="576x320">576x320 (高速)</option>
-                <option value="768x432">768x432 (標準)</option>
-                <option value="1024x576">1024x576 (高画質)</option>
-              </select>
-            </label>
+        <section class="card">
+          <div class="controls">
+            <button id="startBtn" class="success">追跡開始</button>
+            <button id="stopBtn" class="secondary" disabled>追跡停止</button>
+            <button id="centerBtn" class="secondary">現在地へ移動</button>
+            <button id="clearBtn" class="secondary">軌跡クリア</button>
+          </div>
+          <div id="status" class="status">「追跡開始」を押してください。</div>
 
-            <label>
-              秒数
-              <input id="seconds" type="number" min="1" max="8" value="3" required />
-            </label>
-
-            <label>
-              Seed（任意）
-              <input id="seed" type="number" min="0" placeholder="例: 12345" />
-            </label>
+          <div class="grid" aria-live="polite">
+            <div class="metric"><span class="label">緯度</span><span class="value" id="lat">--</span></div>
+            <div class="metric"><span class="label">経度</span><span class="value" id="lng">--</span></div>
+            <div class="metric"><span class="label">精度</span><span class="value" id="accuracy">--</span></div>
+            <div class="metric"><span class="label">速度</span><span class="value" id="speed">--</span></div>
+            <div class="metric"><span class="label">方角</span><span class="value" id="heading">--</span></div>
+            <div class="metric"><span class="label">累計距離</span><span class="value" id="distance">0 m</span></div>
           </div>
 
-          <div class="actions" style="margin-top: .8rem;">
-            <button id="generateBtn" type="submit">Generate</button>
-            <button id="clearHistoryBtn" class="secondary" type="button">履歴を削除</button>
+          <div class="history">
+            <table>
+              <thead>
+                <tr>
+                  <th>時刻</th>
+                  <th>緯度</th>
+                  <th>経度</th>
+                  <th>速度</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr><td colspan="4">まだ記録がありません。</td></tr>
+              </tbody>
+            </table>
           </div>
-        </form>
-
-        <p id="status" class="status"></p>
+        </section>
       </section>
 
-      <section class="card result" id="resultSection" hidden>
-        <h2>生成結果</h2>
-        <a id="downloadLink" class="secondary" style="display:inline-block; text-decoration:none;" download>動画をダウンロード</a>
-        <video id="videoPreview" controls playsinline></video>
+      <section class="card footnote">
+        GPS を使うため、ブラウザの位置情報許可が必要です。HTTPS 環境（または localhost）で動作します。
       </section>
-
-      <section class="card">
-        <h2>履歴（localStorage）</h2>
-        <ul id="historyList" class="history-list"></ul>
-        <p id="emptyHistory" class="empty">まだ履歴はありません。</p>
-      </section>
-
-      <p class="footer">Built with Vercel Serverless Functions + Replicate API</p>
     </main>
 
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
     <script>
-      const form = document.getElementById('videoForm');
-      const promptEl = document.getElementById('prompt');
-      const resolutionEl = document.getElementById('resolution');
-      const secondsEl = document.getElementById('seconds');
-      const seedEl = document.getElementById('seed');
       const statusEl = document.getElementById('status');
-      const generateBtn = document.getElementById('generateBtn');
-      const resultSection = document.getElementById('resultSection');
-      const preview = document.getElementById('videoPreview');
-      const downloadLink = document.getElementById('downloadLink');
-      const historyList = document.getElementById('historyList');
-      const emptyHistory = document.getElementById('emptyHistory');
-      const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const centerBtn = document.getElementById('centerBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const historyBody = document.getElementById('historyBody');
 
-      const HISTORY_KEY = 'ai-video-history-v1';
+      const latEl = document.getElementById('lat');
+      const lngEl = document.getElementById('lng');
+      const accuracyEl = document.getElementById('accuracy');
+      const speedEl = document.getElementById('speed');
+      const headingEl = document.getElementById('heading');
+      const distanceEl = document.getElementById('distance');
+
+      const map = L.map('map').setView([35.681236, 139.767125], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+
+      const marker = L.marker([35.681236, 139.767125]).addTo(map);
+      const polyline = L.polyline([], { color: '#3b82f6', weight: 4 }).addTo(map);
+
+      let watchId = null;
+      let path = [];
+      let totalDistanceM = 0;
 
       function setStatus(message, isError = false) {
         statusEl.textContent = message;
         statusEl.classList.toggle('error', isError);
       }
 
-      function loadHistory() {
-        try {
-          return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
-        } catch {
-          return [];
-        }
+      function formatSpeed(mps) {
+        if (typeof mps !== 'number' || Number.isNaN(mps)) return '--';
+        return `${(mps * 3.6).toFixed(1)} km/h`;
       }
 
-      function saveHistory(history) {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+      function formatHeading(deg) {
+        if (typeof deg !== 'number' || Number.isNaN(deg)) return '--';
+        return `${deg.toFixed(0)}°`;
+      }
+
+      function haversineMeters(a, b) {
+        const R = 6371000;
+        const toRad = (d) => (d * Math.PI) / 180;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const aa =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
       }
 
       function renderHistory() {
-        const history = loadHistory();
-        historyList.innerHTML = '';
-        emptyHistory.hidden = history.length > 0;
-
-        history.forEach((item) => {
-          const li = document.createElement('li');
-          li.className = 'history-item';
-
-          li.innerHTML = `
-            <strong>${item.prompt}</strong>
-            <div class="meta">
-              <span>解像度: ${item.resolution}</span>
-              <span>秒数: ${item.seconds}s</span>
-              <span>Seed: ${item.seed || 'auto'}</span>
-              <span>${new Date(item.createdAt).toLocaleString()}</span>
-            </div>
-            <div class="actions">
-              <button type="button" class="secondary">プレビュー</button>
-              <a href="${item.url}" download style="text-decoration:none;" class="secondary">ダウンロード</a>
-            </div>
-          `;
-
-          li.querySelector('button').addEventListener('click', () => {
-            showResult(item.url);
-          });
-
-          historyList.appendChild(li);
-        });
-      }
-
-      function addHistory(entry) {
-        const history = loadHistory();
-        history.unshift(entry);
-        saveHistory(history);
-        renderHistory();
-      }
-
-      function showResult(url) {
-        preview.src = url;
-        downloadLink.href = url;
-        downloadLink.setAttribute('download', `generated-video-${Date.now()}.mp4`);
-        resultSection.hidden = false;
-      }
-
-      clearHistoryBtn.addEventListener('click', () => {
-        localStorage.removeItem(HISTORY_KEY);
-        renderHistory();
-      });
-
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const payload = {
-          prompt: promptEl.value.trim(),
-          resolution: resolutionEl.value,
-          seconds: Number(secondsEl.value),
-          seed: seedEl.value ? Number(seedEl.value) : undefined,
-        };
-
-        if (!payload.prompt) {
-          setStatus('プロンプトを入力してください。', true);
+        if (path.length === 0) {
+          historyBody.innerHTML = '<tr><td colspan="4">まだ記録がありません。</td></tr>';
           return;
         }
 
-        generateBtn.disabled = true;
-        setStatus('生成中です。通常 30 秒〜数分かかります...');
+        historyBody.innerHTML = '';
+        path.slice(-20).reverse().forEach((point) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${new Date(point.timestamp).toLocaleTimeString()}</td>
+            <td>${point.lat.toFixed(6)}</td>
+            <td>${point.lng.toFixed(6)}</td>
+            <td>${formatSpeed(point.speed)}</td>
+          `;
+          historyBody.appendChild(tr);
+        });
+      }
 
-        try {
-          const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
+      function updatePosition(pos) {
+        const { latitude, longitude, accuracy, speed, heading } = pos.coords;
+        const point = { lat: latitude, lng: longitude, speed, heading, timestamp: pos.timestamp };
 
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || '動画生成に失敗しました。');
-          }
+        if (path.length > 0) {
+          totalDistanceM += haversineMeters(path[path.length - 1], point);
+        }
 
-          showResult(data.videoUrl);
-          addHistory({ ...payload, url: data.videoUrl, createdAt: Date.now() });
-          setStatus('生成が完了しました！');
-        } catch (error) {
-          setStatus(error.message, true);
-        } finally {
-          generateBtn.disabled = false;
+        path.push(point);
+        marker.setLatLng([latitude, longitude]);
+        polyline.setLatLngs(path.map((p) => [p.lat, p.lng]));
+        map.panTo([latitude, longitude], { animate: true });
+
+        latEl.textContent = latitude.toFixed(6);
+        lngEl.textContent = longitude.toFixed(6);
+        accuracyEl.textContent = `${Math.round(accuracy)} m`;
+        speedEl.textContent = formatSpeed(speed);
+        headingEl.textContent = formatHeading(heading);
+        distanceEl.textContent = totalDistanceM >= 1000
+          ? `${(totalDistanceM / 1000).toFixed(2)} km`
+          : `${Math.round(totalDistanceM)} m`;
+
+        renderHistory();
+        setStatus(`追跡中... ${new Date(pos.timestamp).toLocaleTimeString()} に更新`);
+      }
+
+      function handleError(error) {
+        const mapError = {
+          1: '位置情報の使用が拒否されました。ブラウザ設定で許可してください。',
+          2: '現在地を取得できません。GPSや通信状態を確認してください。',
+          3: '位置情報の取得がタイムアウトしました。',
+        };
+        setStatus(mapError[error.code] || '位置情報エラーが発生しました。', true);
+      }
+
+      function startTracking() {
+        if (!('geolocation' in navigator)) {
+          setStatus('このブラウザは位置情報 API に対応していません。', true);
+          return;
+        }
+        if (watchId !== null) return;
+
+        watchId = navigator.geolocation.watchPosition(updatePosition, handleError, {
+          enableHighAccuracy: true,
+          maximumAge: 1000,
+          timeout: 10000,
+        });
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        setStatus('GPSの追跡を開始しました。');
+      }
+
+      function stopTracking() {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        setStatus('追跡を停止しました。');
+      }
+
+      function clearTrack() {
+        path = [];
+        totalDistanceM = 0;
+        polyline.setLatLngs([]);
+        distanceEl.textContent = '0 m';
+        renderHistory();
+        setStatus('軌跡をクリアしました。');
+      }
+
+      startBtn.addEventListener('click', startTracking);
+      stopBtn.addEventListener('click', stopTracking);
+      clearBtn.addEventListener('click', clearTrack);
+      centerBtn.addEventListener('click', () => {
+        if (path.length > 0) {
+          const latest = path[path.length - 1];
+          map.setView([latest.lat, latest.lng], 17);
+        } else {
+          setStatus('まだ現在地データがありません。', true);
         }
       });
-
-      renderHistory();
     </script>
   </body>
 </html>
