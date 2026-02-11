@@ -1,0 +1,11 @@
+{
+  "name": "ai-video-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Text-to-video web app powered by Replicate and Vercel Serverless Functions",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {}
+}

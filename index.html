@@ -3,459 +3,319 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC ビデオ通話アプリ</title>
+    <title>AI Video Generator (Replicate + Vercel)</title>
     <style>
       :root {
-        color-scheme: light;
-        --bg: #f1f5f9;
-        --panel: #ffffff;
-        --text: #0f172a;
-        --muted: #475569;
-        --border: #dbe4f0;
-        --accent: #2563eb;
-        --accent-dark: #1d4ed8;
-        --ok: #16a34a;
-        --danger: #dc2626;
+        color-scheme: dark;
+        --bg: #0b1020;
+        --card: #141a2b;
+        --text: #e9ecf4;
+        --muted: #99a2ba;
+        --accent: #6d8dff;
+        --accent-hover: #5c7df8;
+        --danger: #ff6b6b;
+        --border: #2a324b;
       }
 
-      * {
-        box-sizing: border-box;
-      }
-
+      * { box-sizing: border-box; }
       body {
         margin: 0;
-        min-height: 100vh;
-        font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
-        background: radial-gradient(circle at top, #f8fafc, var(--bg));
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at 20% 10%, #1c2644 0, var(--bg) 35%);
         color: var(--text);
+        min-height: 100vh;
       }
 
-      .app {
-        width: min(1100px, 96vw);
-        margin: 22px auto;
+      .container {
+        width: min(960px, 92%);
+        margin: 2.5rem auto;
         display: grid;
-        gap: 16px;
+        gap: 1rem;
       }
 
-      h1 {
-        margin: 0;
-        font-size: clamp(22px, 3vw, 34px);
-      }
-
-      .subtitle {
-        margin: 8px 0 0;
-        color: var(--muted);
-        font-size: 14px;
-      }
-
-      .panel {
-        background: var(--panel);
+      .card {
+        background: color-mix(in hsl, var(--card) 90%, black);
         border: 1px solid var(--border);
         border-radius: 14px;
-        padding: 14px;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        padding: 1rem;
       }
 
-      .video-grid {
+      h1, h2 { margin: 0 0 .75rem; }
+      p { color: var(--muted); margin-top: 0; }
+
+      .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 12px;
-      }
-
-      .video-card {
-        display: grid;
-        gap: 8px;
-      }
-
-      .video-card h2 {
-        margin: 0;
-        font-size: 15px;
-      }
-
-      video {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-        background: #0f172a;
-        border-radius: 12px;
-        border: 1px solid #c7d2e1;
-        object-fit: cover;
-      }
-
-      .controls,
-      .signal-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-      }
-
-      button {
-        border: 1px solid var(--border);
-        background: #fff;
-        color: var(--text);
-        padding: 8px 12px;
-        border-radius: 9px;
-        font-size: 14px;
-        cursor: pointer;
-      }
-
-      button:hover {
-        border-color: #b4c5dc;
-      }
-
-      button.primary {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent-dark);
-      }
-
-      button.danger {
-        color: var(--danger);
-        border-color: #fecaca;
-        background: #fff5f5;
-      }
-
-      button:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       }
 
       label {
-        font-weight: 700;
-        font-size: 13px;
+        display: flex;
+        flex-direction: column;
+        gap: .4rem;
+        font-size: .92rem;
+      }
+
+      input, select, button, textarea {
+        background: #0f1527;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 10px;
+        padding: .7rem .8rem;
+        font-size: 0.95rem;
       }
 
       textarea {
-        width: 100%;
-        min-height: 128px;
-        border-radius: 9px;
-        border: 1px solid var(--border);
-        padding: 10px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        min-height: 110px;
         resize: vertical;
       }
 
-      .signal-grid {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: 1fr 1fr;
+      button {
+        cursor: pointer;
+        background: var(--accent);
+        border: none;
+        font-weight: 600;
       }
+      button:hover { background: var(--accent-hover); }
+      button:disabled { opacity: .65; cursor: wait; }
 
       .status {
-        margin: 0;
-        font-size: 14px;
-        color: var(--ok);
-      }
-
-      .note {
-        margin: 0;
+        min-height: 1.3rem;
         color: var(--muted);
-        font-size: 13px;
       }
 
-      @media (max-width: 840px) {
-        .signal-grid {
-          grid-template-columns: 1fr;
-        }
+      .status.error { color: var(--danger); }
+
+      .result video {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        margin-top: .7rem;
       }
+
+      .history-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: .75rem;
+      }
+
+      .history-item {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: .75rem;
+        display: grid;
+        gap: .5rem;
+      }
+
+      .meta {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: .86rem;
+      }
+
+      .actions {
+        display: flex;
+        gap: .6rem;
+        flex-wrap: wrap;
+      }
+
+      .secondary {
+        background: #222b43;
+      }
+
+      .empty {
+        color: var(--muted);
+      }
+
+      .footer { color: var(--muted); font-size: .85rem; text-align: center; }
     </style>
   </head>
   <body>
-    <div class="app">
-      <section class="panel">
-        <h1>📹 WebRTC ビデオ通話アプリ</h1>
-        <p class="subtitle">2つのブラウザ間で、手動シグナリング（コピー＆ペースト）で接続できます。</p>
+    <main class="container">
+      <section class="card">
+        <h1>🎬 AI Video Generator</h1>
+        <p>Replicate の zeroscope-v2 を使って、テキストから動画を生成します。</p>
+
+        <form id="videoForm">
+          <label>
+            プロンプト
+            <textarea id="prompt" required placeholder="例: cinematic drone shot of neon Tokyo street in rainy night"></textarea>
+          </label>
+
+          <div class="grid">
+            <label>
+              解像度
+              <select id="resolution">
+                <option value="576x320">576x320 (高速)</option>
+                <option value="768x432">768x432 (標準)</option>
+                <option value="1024x576">1024x576 (高画質)</option>
+              </select>
+            </label>
+
+            <label>
+              秒数
+              <input id="seconds" type="number" min="1" max="8" value="3" required />
+            </label>
+
+            <label>
+              Seed（任意）
+              <input id="seed" type="number" min="0" placeholder="例: 12345" />
+            </label>
+          </div>
+
+          <div class="actions" style="margin-top: .8rem;">
+            <button id="generateBtn" type="submit">Generate</button>
+            <button id="clearHistoryBtn" class="secondary" type="button">履歴を削除</button>
+          </div>
+        </form>
+
+        <p id="status" class="status"></p>
       </section>
 
-      <section class="panel video-grid" aria-label="ビデオ表示">
-        <article class="video-card">
-          <h2>あなたの映像</h2>
-          <video id="localVideo" autoplay muted playsinline></video>
-        </article>
-        <article class="video-card">
-          <h2>相手の映像</h2>
-          <video id="remoteVideo" autoplay playsinline></video>
-        </article>
+      <section class="card result" id="resultSection" hidden>
+        <h2>生成結果</h2>
+        <a id="downloadLink" class="secondary" style="display:inline-block; text-decoration:none;" download>動画をダウンロード</a>
+        <video id="videoPreview" controls playsinline></video>
       </section>
 
-      <section class="panel" aria-label="基本操作">
-        <div class="controls">
-          <button id="startBtn" class="primary" type="button">カメラ開始</button>
-          <button id="createOfferBtn" type="button" disabled>オファー作成</button>
-          <button id="hangupBtn" class="danger" type="button" disabled>切断</button>
-          <button id="toggleAudioBtn" type="button" disabled>マイクOFF</button>
-          <button id="toggleVideoBtn" type="button" disabled>カメラOFF</button>
-        </div>
-        <p id="status" class="status">準備完了：まず「カメラ開始」を押してください。</p>
+      <section class="card">
+        <h2>履歴（localStorage）</h2>
+        <ul id="historyList" class="history-list"></ul>
+        <p id="emptyHistory" class="empty">まだ履歴はありません。</p>
       </section>
 
-      <section class="panel" aria-label="シグナリング">
-        <div class="signal-grid">
-          <article>
-            <label for="outgoingSignal">送信用シグナル（コピーして相手に送る）</label>
-            <textarea id="outgoingSignal" readonly placeholder="ここにOffer / Answer / ICE候補が表示されます"></textarea>
-            <div class="signal-actions">
-              <button id="copyBtn" type="button">コピー</button>
-              <button id="createAnswerBtn" type="button" disabled>受信SDPからアンサー作成</button>
-            </div>
-          </article>
-          <article>
-            <label for="incomingSignal">受信シグナル（相手から受け取って貼り付ける）</label>
-            <textarea id="incomingSignal" placeholder='例: {"sdp":{...},"candidates":[...]}'></textarea>
-            <div class="signal-actions">
-              <button id="applyBtn" class="primary" type="button" disabled>受信シグナルを適用</button>
-              <p class="note">コツ: 片方でオファー作成 → もう片方で適用＆アンサー作成 → 最後にオファー側でアンサー適用。</p>
-            </div>
-          </article>
-        </div>
-      </section>
-    </div>
+      <p class="footer">Built with Vercel Serverless Functions + Replicate API</p>
+    </main>
 
     <script>
-      const localVideo = document.getElementById("localVideo");
-      const remoteVideo = document.getElementById("remoteVideo");
-      const startBtn = document.getElementById("startBtn");
-      const createOfferBtn = document.getElementById("createOfferBtn");
-      const createAnswerBtn = document.getElementById("createAnswerBtn");
-      const applyBtn = document.getElementById("applyBtn");
-      const hangupBtn = document.getElementById("hangupBtn");
-      const toggleAudioBtn = document.getElementById("toggleAudioBtn");
-      const toggleVideoBtn = document.getElementById("toggleVideoBtn");
-      const copyBtn = document.getElementById("copyBtn");
-      const outgoingSignal = document.getElementById("outgoingSignal");
-      const incomingSignal = document.getElementById("incomingSignal");
-      const statusText = document.getElementById("status");
+      const form = document.getElementById('videoForm');
+      const promptEl = document.getElementById('prompt');
+      const resolutionEl = document.getElementById('resolution');
+      const secondsEl = document.getElementById('seconds');
+      const seedEl = document.getElementById('seed');
+      const statusEl = document.getElementById('status');
+      const generateBtn = document.getElementById('generateBtn');
+      const resultSection = document.getElementById('resultSection');
+      const preview = document.getElementById('videoPreview');
+      const downloadLink = document.getElementById('downloadLink');
+      const historyList = document.getElementById('historyList');
+      const emptyHistory = document.getElementById('emptyHistory');
+      const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
-      const rtcConfig = {
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-      };
-
-      let localStream = null;
-      let peerConnection = null;
-      let gatheredCandidates = [];
-      let isAudioEnabled = true;
-      let isVideoEnabled = true;
+      const HISTORY_KEY = 'ai-video-history-v1';
 
       function setStatus(message, isError = false) {
-        statusText.textContent = message;
-        statusText.style.color = isError ? "#dc2626" : "#16a34a";
+        statusEl.textContent = message;
+        statusEl.classList.toggle('error', isError);
       }
 
-      function updateButtons() {
-        const hasStream = Boolean(localStream);
-        const hasPeer = Boolean(peerConnection);
-        startBtn.disabled = hasStream;
-        createOfferBtn.disabled = !hasPeer;
-        createAnswerBtn.disabled = !hasPeer;
-        applyBtn.disabled = !hasPeer;
-        hangupBtn.disabled = !hasPeer;
-        toggleAudioBtn.disabled = !hasStream;
-        toggleVideoBtn.disabled = !hasStream;
-      }
-
-      function buildSignalPayload() {
-        if (!peerConnection || !peerConnection.localDescription) {
-          return;
+      function loadHistory() {
+        try {
+          return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+        } catch {
+          return [];
         }
+      }
+
+      function saveHistory(history) {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+      }
+
+      function renderHistory() {
+        const history = loadHistory();
+        historyList.innerHTML = '';
+        emptyHistory.hidden = history.length > 0;
+
+        history.forEach((item) => {
+          const li = document.createElement('li');
+          li.className = 'history-item';
+
+          li.innerHTML = `
+            <strong>${item.prompt}</strong>
+            <div class="meta">
+              <span>解像度: ${item.resolution}</span>
+              <span>秒数: ${item.seconds}s</span>
+              <span>Seed: ${item.seed || 'auto'}</span>
+              <span>${new Date(item.createdAt).toLocaleString()}</span>
+            </div>
+            <div class="actions">
+              <button type="button" class="secondary">プレビュー</button>
+              <a href="${item.url}" download style="text-decoration:none;" class="secondary">ダウンロード</a>
+            </div>
+          `;
+
+          li.querySelector('button').addEventListener('click', () => {
+            showResult(item.url);
+          });
+
+          historyList.appendChild(li);
+        });
+      }
+
+      function addHistory(entry) {
+        const history = loadHistory();
+        history.unshift(entry);
+        saveHistory(history);
+        renderHistory();
+      }
+
+      function showResult(url) {
+        preview.src = url;
+        downloadLink.href = url;
+        downloadLink.setAttribute('download', `generated-video-${Date.now()}.mp4`);
+        resultSection.hidden = false;
+      }
+
+      clearHistoryBtn.addEventListener('click', () => {
+        localStorage.removeItem(HISTORY_KEY);
+        renderHistory();
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
 
         const payload = {
-          sdp: peerConnection.localDescription,
-          candidates: gatheredCandidates
+          prompt: promptEl.value.trim(),
+          resolution: resolutionEl.value,
+          seconds: Number(secondsEl.value),
+          seed: seedEl.value ? Number(seedEl.value) : undefined,
         };
 
-        outgoingSignal.value = JSON.stringify(payload, null, 2);
-      }
+        if (!payload.prompt) {
+          setStatus('プロンプトを入力してください。', true);
+          return;
+        }
 
-      function createPeerConnection() {
-        peerConnection = new RTCPeerConnection(rtcConfig);
-        gatheredCandidates = [];
+        generateBtn.disabled = true;
+        setStatus('生成中です。通常 30 秒〜数分かかります...');
 
-        peerConnection.addEventListener("icecandidate", (event) => {
-          if (event.candidate) {
-            gatheredCandidates.push(event.candidate.toJSON());
-          }
-
-          if (!event.candidate) {
-            buildSignalPayload();
-            setStatus("シグナル生成完了。コピーして相手に送ってください。");
-          }
-        });
-
-        peerConnection.addEventListener("track", (event) => {
-          if (!remoteVideo.srcObject) {
-            remoteVideo.srcObject = event.streams[0];
-          }
-        });
-
-        peerConnection.addEventListener("connectionstatechange", () => {
-          if (peerConnection.connectionState === "connected") {
-            setStatus("接続成功！ビデオ通話中です。");
-          } else if (peerConnection.connectionState === "failed") {
-            setStatus("接続に失敗しました。シグナルを再作成してください。", true);
-          }
-        });
-      }
-
-      async function startMedia() {
         try {
-          localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
+          const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
           });
 
-          localVideo.srcObject = localStream;
-          createPeerConnection();
-
-          localStream.getTracks().forEach((track) => {
-            peerConnection.addTrack(track, localStream);
-          });
-
-          setStatus("カメラ開始完了。オファー作成または受信シグナル適用ができます。");
-          updateButtons();
-        } catch (error) {
-          setStatus("カメラ・マイクの利用が拒否されました。権限を確認してください。", true);
-          console.error(error);
-        }
-      }
-
-      async function createOffer() {
-        try {
-          gatheredCandidates = [];
-          const offer = await peerConnection.createOffer();
-          await peerConnection.setLocalDescription(offer);
-          setStatus("オファー作成中... ICE候補を収集中です。");
-        } catch (error) {
-          setStatus("オファー作成に失敗しました。", true);
-          console.error(error);
-        }
-      }
-
-      async function createAnswer() {
-        try {
-          const payload = JSON.parse(incomingSignal.value);
-
-          if (!payload.sdp || payload.sdp.type !== "offer") {
-            setStatus("受信シグナルに offer が見つかりません。", true);
-            return;
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || '動画生成に失敗しました。');
           }
 
-          gatheredCandidates = [];
-          await peerConnection.setRemoteDescription(payload.sdp);
-
-          if (Array.isArray(payload.candidates)) {
-            for (const candidate of payload.candidates) {
-              await peerConnection.addIceCandidate(candidate);
-            }
-          }
-
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
-          setStatus("アンサー作成中... ICE候補を収集中です。");
+          showResult(data.videoUrl);
+          addHistory({ ...payload, url: data.videoUrl, createdAt: Date.now() });
+          setStatus('生成が完了しました！');
         } catch (error) {
-          setStatus("アンサー作成に失敗しました。JSON形式を確認してください。", true);
-          console.error(error);
+          setStatus(error.message, true);
+        } finally {
+          generateBtn.disabled = false;
         }
-      }
+      });
 
-      async function applyIncomingSignal() {
-        try {
-          const payload = JSON.parse(incomingSignal.value);
-
-          if (!payload.sdp) {
-            setStatus("受信シグナルに sdp がありません。", true);
-            return;
-          }
-
-          await peerConnection.setRemoteDescription(payload.sdp);
-
-          if (Array.isArray(payload.candidates)) {
-            for (const candidate of payload.candidates) {
-              await peerConnection.addIceCandidate(candidate);
-            }
-          }
-
-          setStatus(`受信シグナルを適用しました（${payload.sdp.type}）。`);
-        } catch (error) {
-          setStatus("受信シグナルの適用に失敗しました。JSON形式を確認してください。", true);
-          console.error(error);
-        }
-      }
-
-      function toggleAudio() {
-        const audioTracks = localStream ? localStream.getAudioTracks() : [];
-        if (audioTracks.length === 0) {
-          return;
-        }
-
-        isAudioEnabled = !isAudioEnabled;
-        audioTracks.forEach((track) => {
-          track.enabled = isAudioEnabled;
-        });
-        toggleAudioBtn.textContent = isAudioEnabled ? "マイクOFF" : "マイクON";
-      }
-
-      function toggleVideo() {
-        const videoTracks = localStream ? localStream.getVideoTracks() : [];
-        if (videoTracks.length === 0) {
-          return;
-        }
-
-        isVideoEnabled = !isVideoEnabled;
-        videoTracks.forEach((track) => {
-          track.enabled = isVideoEnabled;
-        });
-        toggleVideoBtn.textContent = isVideoEnabled ? "カメラOFF" : "カメラON";
-      }
-
-      function hangup() {
-        if (peerConnection) {
-          peerConnection.close();
-          peerConnection = null;
-        }
-
-        if (localStream) {
-          localStream.getTracks().forEach((track) => track.stop());
-          localStream = null;
-        }
-
-        localVideo.srcObject = null;
-        remoteVideo.srcObject = null;
-        outgoingSignal.value = "";
-        incomingSignal.value = "";
-        isAudioEnabled = true;
-        isVideoEnabled = true;
-        toggleAudioBtn.textContent = "マイクOFF";
-        toggleVideoBtn.textContent = "カメラOFF";
-
-        setStatus("通話を切断しました。再開するにはカメラ開始を押してください。");
-        updateButtons();
-      }
-
-      async function copySignal() {
-        if (!outgoingSignal.value) {
-          setStatus("コピーできるシグナルがありません。", true);
-          return;
-        }
-
-        try {
-          await navigator.clipboard.writeText(outgoingSignal.value);
-          setStatus("送信用シグナルをクリップボードにコピーしました。");
-        } catch (error) {
-          setStatus("コピーに失敗しました。手動でコピーしてください。", true);
-          console.error(error);
-        }
-      }
-
-      startBtn.addEventListener("click", startMedia);
-      createOfferBtn.addEventListener("click", createOffer);
-      createAnswerBtn.addEventListener("click", createAnswer);
-      applyBtn.addEventListener("click", applyIncomingSignal);
-      toggleAudioBtn.addEventListener("click", toggleAudio);
-      toggleVideoBtn.addEventListener("click", toggleVideo);
-      hangupBtn.addEventListener("click", hangup);
-      copyBtn.addEventListener("click", copySignal);
-
-      updateButtons();
+      renderHistory();
     </script>
   </body>
 </html>
