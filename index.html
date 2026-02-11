@@ -197,12 +197,13 @@
       let lastUpdateAt = 0;
       let staleCheckTimer = null;
       let extraPollTimer = null;
-      let speedDecayTimer = null;
+      let speedTickerTimer = null;
 
       let deviceHeadingDeg = null;
       let lastHeading = null;
       let lastHeadingSource = '';
       let currentSpeedMps = 0;
+      let targetSpeedMps = 0;
       let lastRawPoint = null;
       let lastSpeedSource = '推定';
 
@@ -288,9 +289,25 @@
       }
 
       function updateSpeedDisplay(mps, source = lastSpeedSource) {
-        currentSpeedMps = Math.max(0, Number.isFinite(mps) ? mps : 0);
+        targetSpeedMps = Math.max(0, Number.isFinite(mps) ? mps : 0);
         lastSpeedSource = source;
-        speedEl.textContent = `${formatSpeedFromMps(currentSpeedMps)} (${source})`;
+      }
+
+      function renderSpeed() {
+        const staleSec = lastUpdateAt ? (Date.now() - lastUpdateAt) / 1000 : 999;
+
+        if (watchId === null) {
+          targetSpeedMps = 0;
+        } else if (staleSec > 3) {
+          targetSpeedMps *= 0.9;
+          if (staleSec > 12) targetSpeedMps = 0;
+        }
+
+        currentSpeedMps += (targetSpeedMps - currentSpeedMps) * 0.35;
+        if (currentSpeedMps < 0.02) currentSpeedMps = 0;
+
+        const ageText = staleSec < 60 ? `・${Math.floor(staleSec)}秒前` : '';
+        speedEl.textContent = `${formatSpeedFromMps(currentSpeedMps)} (${lastSpeedSource}${ageText})`;
       }
 
       function restartTrackingWatch() {
@@ -323,24 +340,15 @@
         }
       }
 
-      function ensureSpeedDecay() {
-        if (speedDecayTimer !== null) return;
-        speedDecayTimer = setInterval(() => {
-          if (watchId === null) return;
-          const staleSec = (Date.now() - lastUpdateAt) / 1000;
-          if (staleSec > 3 && currentSpeedMps > 0) {
-            updateSpeedDisplay(currentSpeedMps * 0.7);
-          }
-          if (staleSec > 10) {
-            updateSpeedDisplay(0);
-          }
-        }, 1000);
+      function ensureSpeedTicker() {
+        if (speedTickerTimer !== null) return;
+        speedTickerTimer = setInterval(renderSpeed, 500);
       }
 
-      function clearSpeedDecay() {
-        if (speedDecayTimer !== null) {
-          clearInterval(speedDecayTimer);
-          speedDecayTimer = null;
+      function clearSpeedTicker() {
+        if (speedTickerTimer !== null) {
+          clearInterval(speedTickerTimer);
+          speedTickerTimer = null;
         }
       }
 
@@ -511,7 +519,7 @@
         restartTrackingWatch();
         ensureExtraPoll();
         ensureStaleCheckTimer();
-        ensureSpeedDecay();
+        ensureSpeedTicker();
         lastUpdateAt = Date.now();
 
         startBtn.disabled = true;
@@ -526,8 +534,9 @@
         }
         clearExtraPoll();
         clearStaleCheckTimer();
-        clearSpeedDecay();
-        updateSpeedDisplay(0);
+        clearSpeedTicker();
+        updateSpeedDisplay(0, '停止');
+        renderSpeed();
         startBtn.disabled = false;
         stopBtn.disabled = true;
         setStatus('追跡を停止しました。');
@@ -539,7 +548,8 @@
         totalDistanceM = 0;
         polyline.setLatLngs([]);
         distanceEl.textContent = '0 m';
-        updateSpeedDisplay(0);
+        updateSpeedDisplay(0, '停止');
+        renderSpeed();
         renderHistory();
         renderHeading();
         setStatus('軌跡をクリアしました。');
@@ -558,7 +568,8 @@
       });
 
       renderHeading();
-      updateSpeedDisplay(0);
+      updateSpeedDisplay(0, '待機');
+      renderSpeed();
     </script>
   </body>
 </html>
