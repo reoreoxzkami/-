@@ -190,6 +190,9 @@
       const MIN_MOVEMENT_FOR_BEARING_M = 1;
       const STALE_TIMEOUT_MS = 25000;
       const EXTRA_POLL_MS = 3000;
+      const SPEED_WINDOW_MS = 12000;
+      const MIN_SPEED_DT_SEC = 2;
+      const MIN_MOVEMENT_FOR_SPEED_M = 1.5;
 
       let watchId = null;
       let path = [];
@@ -205,6 +208,7 @@
       let currentSpeedMps = 0;
       let targetSpeedMps = 0;
       let lastRawPoint = null;
+      let rawTrack = [];
       let lastSpeedSource = '推定';
 
       function setStatus(message, isError = false) {
@@ -239,6 +243,10 @@
         const aa = Math.sin(dLat / 2) ** 2
           + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
         return 2 * R * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+      }
+
+      function trimRawTrack(nowTs) {
+        rawTrack = rawTrack.filter((p) => nowTs - p.timestamp <= SPEED_WINDOW_MS);
       }
 
       function setHeading(deg, source) {
@@ -401,22 +409,51 @@
       }
 
       function resolveSpeedMps(point) {
-        if (Number.isFinite(point.speed) && point.speed >= 0) {
-          return { value: point.speed, source: 'GPS' };
+        const gpsSpeed = Number.isFinite(point.speed) && point.speed >= 0 ? point.speed : null;
+
+        let estimated = 0;
+        let base = null;
+        for (let i = 0; i < rawTrack.length; i += 1) {
+          const candidate = rawTrack[i];
+          const dtSec = (point.timestamp - candidate.timestamp) / 1000;
+          if (dtSec >= MIN_SPEED_DT_SEC) {
+            base = candidate;
+            break;
+          }
         }
 
-        if (!lastRawPoint) {
-          return { value: 0, source: '推定' };
+        if (base) {
+          const dtSec = Math.max((point.timestamp - base.timestamp) / 1000, MIN_SPEED_DT_SEC);
+          const distanceM = haversineMeters(base, point);
+          if (distanceM >= MIN_MOVEMENT_FOR_SPEED_M) {
+            estimated = distanceM / dtSec;
+          }
+        } else if (lastRawPoint) {
+          const dtSec = Math.max((point.timestamp - lastRawPoint.timestamp) / 1000, 0.5);
+          const distanceM = haversineMeters(lastRawPoint, point);
+          if (distanceM >= MIN_MOVEMENT_FOR_SPEED_M) {
+            estimated = distanceM / dtSec;
+          }
         }
 
-        const dtSec = Math.max((point.timestamp - lastRawPoint.timestamp) / 1000, 0.5);
-        const distanceM = haversineMeters(lastRawPoint, point);
-        return { value: distanceM / dtSec, source: '推定' };
+        if (gpsSpeed !== null && gpsSpeed > 0.3) {
+          return { value: gpsSpeed, source: 'GPS' };
+        }
+        if (estimated > 0) {
+          return { value: estimated, source: '推定' };
+        }
+        if (gpsSpeed !== null) {
+          return { value: gpsSpeed, source: 'GPS' };
+        }
+        return { value: 0, source: '推定' };
       }
 
       function updatePosition(pos) {
         const { latitude, longitude, accuracy, speed, heading } = pos.coords;
-        const point = { lat: latitude, lng: longitude, speed, heading, timestamp: pos.timestamp, speedMps: 0 };
+        const point = { lat: latitude, lng: longitude, speed, heading, accuracy, timestamp: pos.timestamp, speedMps: 0 };
+
+        rawTrack.push(point);
+        trimRawTrack(point.timestamp);
 
         const speedInfo = resolveSpeedMps(point);
         const smoothed = smoothSpeed(speedInfo.value);
@@ -545,6 +582,7 @@
       function clearTrack() {
         path = [];
         lastRawPoint = null;
+        rawTrack = [];
         totalDistanceM = 0;
         polyline.setLatLngs([]);
         distanceEl.textContent = '0 m';
